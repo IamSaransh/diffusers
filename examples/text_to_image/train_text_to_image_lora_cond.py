@@ -859,8 +859,8 @@ def main():
                 class_embeds = batch["class_embeds"]  
                 class_embeds.to(encoder_hidden_states.device)
                 class_embeds = class_embeds.unsqueeze(1).expand(-1, encoder_hidden_states.size(1), -1) # expand class embeddings to match the shape of encoder_hidden_states
-                print(f"Class Embeds: {class_embeds.shape}")
-                print(f"encoder_hidden_states = {encoder_hidden_states.shape}")
+                # print(f"Class Embeds: {class_embeds.shape}")
+                # print(f"encoder_hidden_states = {encoder_hidden_states.shape}")
                 # encoder_hidden_states = torch.cat([encoder_hidden_states, class_embeds], dim=-1)
                 encoder_hidden_states = encoder_hidden_states + class_embeds
 

@@ -856,7 +856,7 @@ def main():
                 encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
 
                 # Concatenate class embeddings with the text embeddings
-                class_embeds = batch["class_embed"]  
+                class_embeds = batch["class_embeds"]  
                 class_embeds.to(encoder_hidden_states.device)
                 encoder_hidden_states = torch.cat([encoder_hidden_states, class_embeds], dim=-1)
 

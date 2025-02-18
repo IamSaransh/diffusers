@@ -418,6 +418,24 @@ def parse_args():
         default=4,
         help=("The dimension of the LoRA update matrices."),
     )
+    parser.add_argument(
+        "--eval_fid",
+        type=bool,
+        default=False,
+        help=("Whether or not to evaluate FID post every checkpoint."),
+    )
+    parser.add_argument(
+        "--original_image_path",
+        type=str,
+        default="",
+        help=("The path to the original images for FID scores."),
+    )
+    parser.add_argument(
+        "--gen_image_path",
+        type=str,
+        default="",
+        help=("The path to the generated images ."),
+    )
 
     args = parser.parse_args()
     env_local_rank = int(os.environ.get("LOCAL_RANK", -1))
@@ -781,7 +799,7 @@ def main():
         # Only show the progress bar once on each machine.
         disable=not accelerator.is_local_main_process,
     )
-
+    fid_metrics = {}
     for epoch in range(first_epoch, args.num_train_epochs):
         unet.train()
         train_loss = 0.0
@@ -903,6 +921,29 @@ def main():
 
                         logger.info(f"Saved state to {save_path}")
 
+                        #now we will compute the FID score if given green light on the validation prompt
+                        if args.eval_fid:
+                            orig_images_path = args.original_image_path
+                            gen_images_path = args.gen_image_path
+                            from fid_utils import count_images, generate_images, compute_fid
+                            num_images = count_images(orig_images_path)
+
+                            pipeline = DiffusionPipeline.from_pretrained(
+                                args.pretrained_model_name_or_path,
+                                unet=unwrapped_unet,
+                                revision=args.revision,
+                                variant=args.variant,
+                                torch_dtype=weight_dtype,
+                            )
+
+                            generate_images(pipeline, args, global_step, accelerator, epoch, num_images)
+                            fid = compute_fid(args, global_step)
+                            results = {}
+                            results['epoch'] = epoch
+                            results['fid'] = fid
+                            fid_metrics[global_step] = results 
+
+
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
 
@@ -953,6 +994,7 @@ def main():
             # run inference
             images = log_validation(pipeline, args, accelerator, epoch, is_final_validation=True)
 
+        #creaate a json with the fid scores as the valisation occurs
         if args.push_to_hub:
             save_model_card(
                 repo_id,
@@ -967,6 +1009,7 @@ def main():
                 commit_message="End of training",
                 ignore_patterns=["step_*", "epoch_*"],
             )
+        
 
     accelerator.end_training()
 

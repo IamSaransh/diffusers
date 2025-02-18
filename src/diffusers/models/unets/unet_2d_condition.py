@@ -68,7 +68,7 @@ class UNet2DConditionOutput(BaseOutput):
     sample: torch.Tensor = None
 
 
-class UNet2DConditionModel(
+class flayerUNet2DConditionModel(
     ModelMixin, ConfigMixin, FromOriginalModelMixin, UNet2DConditionLoadersMixin, PeftAdapterMixin
 ):
     r"""

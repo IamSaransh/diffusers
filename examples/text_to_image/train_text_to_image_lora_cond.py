@@ -481,7 +481,8 @@ def main():
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
-        project_config=accelerator_project_config
+        project_config=accelerator_project_config,
+        cpu=True
     )
 
     # Disable AMP for MPS.
@@ -531,10 +532,14 @@ def main():
     unet = UNet2DConditionModel.from_pretrained(
         args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
     )
+    unet.class_embed_type = 'identity' # set class_embed_type to identity to use class embeddings
+    #Uses nn.Embedding internally, automatically creating embeddings from class indices.
+    unet.class_embeddings_concat = True
     # freeze parameters of models to save more memory
     unet.requires_grad_(False)
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
+    # not being used as of now
     class_embed_layer = torch.nn.Embedding(num_classes, class_embedding_dim)
     class_embed_layer.requires_grad_(False)
 
@@ -702,10 +707,9 @@ def main():
         examples["pixel_values"] = [train_transforms(image) for image in images]
         examples["input_ids"] = tokenize_captions(examples)
         class_labels = examples["caption"] 
+        #class_label_index contais the integer value for the caption from the list CLASS_NAMES
         class_label_index = [CLASS_NAMES.index(label) for label in class_labels]
-        # Generate class embeddings using torch.nn.Embedding
-        class_embeddings = class_embed_layer(torch.tensor(class_label_index, dtype=torch.long))
-        examples["class_embed"] = class_embeddings
+        examples["class_label_index"] = torch.tensor(class_label_index)
         return examples
 
     with accelerator.main_process_first():
@@ -719,11 +723,11 @@ def main():
         pixel_values = pixel_values.to(memory_format=torch.contiguous_format).float()
         input_ids = torch.stack([example["input_ids"] for example in examples])
         # Add class embeddings (assuming you have a 'class_embed' field in the examples)
-        class_embeds = torch.stack([example["class_embed"] for example in examples])
+        class_label_index = torch.stack([example["class_label_index"] for example in examples])
         return {
             "pixel_values": pixel_values, 
             "input_ids": input_ids, 
-            "class_embeds": class_embeds
+            "class_label_index": class_label_index
         }
 
     # DataLoaders creation:
@@ -852,16 +856,16 @@ def main():
                 noisy_latents = noise_scheduler.add_noise(latents, noise, timesteps)
 
                 # Get the text embedding for conditioning
-                encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0]
+                encoder_hidden_states = text_encoder(batch["input_ids"], return_dict=False)[0] # 
 
-                # Concatenate class embeddings with the text embeddings
-                class_embeds = batch["class_embeds"]  
-                class_embeds = class_embeds.to(encoder_hidden_states.device)
-                class_embeds = class_embeds.unsqueeze(1).expand(-1, encoder_hidden_states.size(1), -1) # expand class embeddings to match the shape of encoder_hidden_states
+                # Concatenate class embeddings with the text embedding
+                class_label_indices = batch["class_label_index"]
+                # class_embeds = class_embed_layer(class_label_indices,class_embedding_dim)
+                # class_embeds = class_embeds.unsqueeze(1).expand(-1, encoder_hidden_states.size(1), -1) # expand class embeddings to match the shape of encoder_hidden_states
                 # print(f"Class Embeds: {class_embeds.shape}")
                 # print(f"encoder_hidden_states = {encoder_hidden_states.shape}")
                 # encoder_hidden_states = torch.cat([encoder_hidden_states, class_embeds], dim=-1)
-                encoder_hidden_states = encoder_hidden_states + class_embeds
+                # encoder_hidden_states = encoder_hidden_states
 
 
                 # Get the target for loss depending on the prediction type
@@ -877,7 +881,10 @@ def main():
                     raise ValueError(f"Unknown prediction type {noise_scheduler.config.prediction_type}")
 
                 # Predict the noise residual and compute loss
-                model_pred = unet(noisy_latents, timesteps, encoder_hidden_states, return_dict=False)[0]
+                model_pred = unet(sample = noisy_latents, 
+                                    timestep =  timesteps,
+                                    class_labels = class_label_indices,
+                                    return_dict=False)[0]
 
                 if args.snr_gamma is None:
                     loss = F.mse_loss(model_pred.float(), target.float(), reduction="mean")

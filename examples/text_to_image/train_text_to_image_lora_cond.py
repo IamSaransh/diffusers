@@ -61,7 +61,7 @@ CLASS_NAMES = ['Tomato mosaic virus','Tomato Leaf Mold', 'Pepper bell Bacterial 
             ]
 num_classes = 15
 class_embedding_dim = 768 
-class_embed_layer = torch.nn.Embedding(num_classes, class_embedding_dim)
+
 
 if is_wandb_available():
     import wandb
@@ -536,6 +536,8 @@ def main():
     unet.requires_grad_(False)
     vae.requires_grad_(False)
     text_encoder.requires_grad_(False)
+    class_embed_layer = torch.nn.Embedding(num_classes, class_embedding_dim)
+    class_embed_layer.requires_grad_(False)
 
     # For mixed precision training we cast all non-trainable weights (vae, non-lora text_encoder and non-lora unet) to half-precision
     # as these weights are only used for inference, keeping weights in full precision is not required.
@@ -556,6 +558,7 @@ def main():
     unet.to(accelerator.device, dtype=weight_dtype)
     vae.to(accelerator.device, dtype=weight_dtype)
     text_encoder.to(accelerator.device, dtype=weight_dtype)
+    class_embed_layer.to(accelerator.device, dtype=weight_dtype)
 
     # Add adapter and make sure the trainable params are in float32.
     unet.add_adapter(unet_lora_config)
@@ -854,6 +857,7 @@ def main():
 
                 # Concatenate class embeddings with the text embeddings
                 class_embeds = batch["class_embed"]  
+                class_embeds.to(encoder_hidden_states.device)
                 encoder_hidden_states = torch.cat([encoder_hidden_states, class_embeds], dim=-1)
 
 

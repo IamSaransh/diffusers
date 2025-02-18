@@ -884,6 +884,7 @@ def main():
                 model_pred = unet(sample = noisy_latents, 
                                     timestep =  timesteps,
                                     class_labels = class_label_indices,
+                                    encoder_hidden_states = encoder_hidden_states,
                                     return_dict=False)[0]
 
                 if args.snr_gamma is None:

@@ -482,6 +482,7 @@ def main():
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
         project_config=accelerator_project_config,
+        cpu=True
     )
 
     # Disable AMP for MPS.
@@ -699,8 +700,9 @@ def main():
         examples["pixel_values"] = [train_transforms(image) for image in images]
         examples["input_ids"] = tokenize_captions(examples)
         class_labels = examples["caption"] 
+        class_label_index = [CLASS_NAMES.index(label) for label in class_labels]
         # Generate class embeddings using torch.nn.Embedding
-        class_embeddings = class_embed_layer(torch.tensor(class_labels, dtype=torch.long))
+        class_embeddings = class_embed_layer(torch.tensor(class_label_index, dtype=torch.long))
         examples["class_embed"] = class_embeddings
         return examples
 

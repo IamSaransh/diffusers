@@ -60,7 +60,7 @@ CLASS_NAMES = ['Tomato mosaic virus','Tomato Leaf Mold', 'Pepper bell Bacterial 
              'Tomato Target Spot', 'Tomato Septoria leaf spot',  'Tomato Spider mites Two spotted spider mite','Tomato Bacterial spot', 'Potato healthy'
             ]
 num_classes = 15
-class_embedding_dim = 768 
+class_embedding_dim = 1024 
 
 
 if is_wandb_available():

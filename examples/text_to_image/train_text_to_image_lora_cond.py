@@ -481,8 +481,8 @@ def main():
         gradient_accumulation_steps=args.gradient_accumulation_steps,
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
-        project_config=accelerator_project_config
-        # cpu=True
+        project_config=accelerator_project_config,
+        cpu=True
     )
 
     # Disable AMP for MPS.
@@ -534,7 +534,15 @@ def main():
     )
     unet.class_embed_type = None # set class_embed_type to identity to use class embeddings
     unet.class_embeddings_concat = True
-    unet.num_class_embeds = class_embedding_dim
+    unet.num_class_embeds = num_classes
+    unet._set_class_embedding(
+        class_embed_type=None,
+        act_fn = 'silu',
+        num_class_embeds = num_classes,
+        projection_class_embeddings_input_dim=None,
+        time_embed_dim=1280,
+        timestep_input_dim=320
+    )
     # freeze parameters of models to save more memory
     unet.requires_grad_(False)
     vae.requires_grad_(False)
@@ -860,6 +868,7 @@ def main():
 
                 # Concatenate class embeddings with the text embedding
                 class_label_indices = batch["class_label_index"]
+                # class_label_indices = class_embed_layer(class_label_indices).to(accelerator.device)
                 # class_embeds = class_embed_layer(class_label_indices,class_embedding_dim)
                 # class_embeds = class_embeds.unsqueeze(1).expand(-1, encoder_hidden_states.size(1), -1) # expand class embeddings to match the shape of encoder_hidden_states
                 # print(f"Class Embeds: {class_embeds.shape}")

@@ -613,6 +613,7 @@ class UNet2DConditionModel(
         time_embed_dim: int,
         timestep_input_dim: int,
     ):
+        print("class_embed_type", class_embed_type)
         if class_embed_type is None and num_class_embeds is not None:
             self.class_embedding = nn.Embedding(num_class_embeds, time_embed_dim)
         elif class_embed_type == "timestep":
@@ -640,6 +641,7 @@ class UNet2DConditionModel(
             self.class_embedding = nn.Linear(projection_class_embeddings_input_dim, time_embed_dim)
         else:
             self.class_embedding = None
+        print(f"set class embedidng as {self.class_embedding}")
 
     def _set_add_embedding(
         self,
@@ -1051,6 +1053,7 @@ class UNet2DConditionModel(
         encoder_attention_mask: Optional[torch.Tensor] = None,
         return_dict: bool = True,
     ) -> Union[UNet2DConditionOutput, Tuple]:
+        
         r"""
         The [`UNet2DConditionModel`] forward method.
 
@@ -1100,6 +1103,8 @@ class UNet2DConditionModel(
         # However, the upsampling interpolation output size can be forced to fit any upsampling size
         # on the fly if necessary.
         default_overall_up_factor = 2**self.num_upsamplers
+
+        
 
         # upsample size should be forwarded when sample is not a multiple of `default_overall_up_factor`
         forward_upsample_size = False

@@ -1,0 +1,46 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug Text to Image Training with LoRA",
+        "type": "debugpy",
+        "request": "launch",
+        "program": "${workspaceFolder}/examples/text_to_image/train_text_to_image_lora_cond.py",
+        "args": [
+          "--rank=8",
+          "--pretrained_model_name_or_path=stabilityai/stable-diffusion-2",
+          "--dataset_name=ButterChicken98/plantvillage-image-text-pairs",
+          "--dataloader_num_workers=2",
+          "--resolution=256",
+          "--random_flip",
+          "--center_crop",
+          "--train_batch_size=1",
+          "--gradient_accumulation_steps=1",
+          "--max_train_steps=8050",
+          "--learning_rate=5e-05",
+          "--max_grad_norm=1",
+          "--lr_scheduler=cosine",
+          "--lr_warmup_steps=500",
+          "--output_dir=/home/saranshvashistha/workspace/diffusers/output",
+          "--push_to_hub",
+          "--caption_column=captions",
+          "--image_column=image",
+          "--hub_model_id=plantVillage-stableDiffusion-2-lora_rank_8",
+          "--validation_prompt=A tomato plant leaf curling and yellowing, typical symptoms of Tomato Yellow Leaf Curl Virus.",
+          "--enable_xformers_memory_efficient_attention",
+          "--seed=1337",
+          "--gradient_checkpointing",
+          "--checkpointing_steps=1000",
+          "--mixed_precision=fp16",
+          "--gradient_checkpointing",
+          "--use_8bit_adam"
+        ],
+        "env": {
+          "PYTHONPATH": "${workspaceFolder}",
+        },
+        "console": "integratedTerminal",
+        "justMyCode": false
+      }
+    ]
+  }
+  

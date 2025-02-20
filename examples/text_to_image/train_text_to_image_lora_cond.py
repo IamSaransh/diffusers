@@ -532,9 +532,9 @@ def main():
     unet = UNet2DConditionModel.from_pretrained(
         args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
     )
-    unet.class_embed_type = 'identity' # set class_embed_type to identity to use class embeddings
-    #Uses nn.Embedding internally, automatically creating embeddings from class indices.
+    unet.class_embed_type = None # set class_embed_type to identity to use class embeddings
     unet.class_embeddings_concat = True
+    unet.num_class_embeds = class_embedding_dim
     # freeze parameters of models to save more memory
     unet.requires_grad_(False)
     vae.requires_grad_(False)

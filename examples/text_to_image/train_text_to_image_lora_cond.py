@@ -994,16 +994,16 @@ def main():
         if accelerator.is_main_process:
             if args.validation_prompt is not None and epoch % args.validation_epochs == 0:
                 # create pipeline
-                pipeline = DiffusionPipeline.from_pretrained(
-                    args.pretrained_model_name_or_path,
-                    unet=unwrap_model(unet),
-                    revision=args.revision,
-                    variant=args.variant,
-                    torch_dtype=weight_dtype,
-                )
-                images = log_validation(pipeline, args, accelerator, epoch)
+                # pipeline = DiffusionPipeline.from_pretrained(
+                #     args.pretrained_model_name_or_path,
+                #     unet=unwrap_model(unet),
+                #     revision=args.revision,
+                #     variant=args.variant,
+                #     torch_dtype=weight_dtype,
+                # )
+                # images = log_validation(pipeline, args, accelerator, epoch)
 
-                del pipeline
+                # del pipeline
                 torch.cuda.empty_cache()
 
     # Save the lora layers
@@ -1022,24 +1022,26 @@ def main():
         # Final inference
         # Load previous pipeline
         if args.validation_prompt is not None:
-            pipeline = DiffusionPipeline.from_pretrained(
-                args.pretrained_model_name_or_path,
-                revision=args.revision,
-                variant=args.variant,
-                torch_dtype=weight_dtype,
-            )
+            print("Running final validation dummy")
+            # pipeline = DiffusionPipeline.from_pretrained(
+            #     args.pretrained_model_name_or_path,
+            #     revision=args.revision,
+            #     variant=args.variant,
+            #     torch_dtype=weight_dtype,
+            # )
 
-            # load attention processors
-            pipeline.load_lora_weights(args.output_dir)
+            # # load attention processors
+            # pipeline.load_lora_weights(args.output_dir)
 
-            # run inference
-            images = log_validation(pipeline, args, accelerator, epoch, is_final_validation=True)
+            # # run inference
+            # images = log_validation(pipeline, args, accelerator, epoch, is_final_validation=True)
 
         #creaate a json with the fid scores as the valisation occurs
         if args.push_to_hub:
             save_model_card(
                 repo_id,
-                images=images,
+                images=None,
+                # images=images,
                 base_model=args.pretrained_model_name_or_path,
                 dataset_name=args.dataset_name,
                 repo_folder=args.output_dir,

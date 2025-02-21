@@ -482,7 +482,7 @@ def main():
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
         project_config=accelerator_project_config,
-        cpu=True
+        # cpu=True
     )
 
     # Disable AMP for MPS.
@@ -529,20 +529,31 @@ def main():
     vae = AutoencoderKL.from_pretrained(
         args.pretrained_model_name_or_path, subfolder="vae", revision=args.revision, variant=args.variant
     )
-    unet = UNet2DConditionModel.from_pretrained(
-        args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
-    )
-    unet.class_embed_type = None # set class_embed_type to identity to use class embeddings
-    unet.class_embeddings_concat = True
-    unet.num_class_embeds = num_classes
-    unet._set_class_embedding(
-        class_embed_type=None,
-        act_fn = 'silu',
-        num_class_embeds = num_classes,
-        projection_class_embeddings_input_dim=None,
-        time_embed_dim=1280,
-        timestep_input_dim=320
-    )
+    # unet = UNet2DConditionModel.from_pretrained(
+    #     args.pretrained_model_name_or_path, subfolder="unet", revision=args.revision, variant=args.variant
+    # )
+    # unet.class_embed_type = None # set class_embed_type to identity to use class embeddings
+    # unet.class_embeddings_concat = True
+    # unet.num_class_embeds = num_classes
+    # unet._set_class_embedding(
+    #     class_embed_type=None,
+    #     act_fn = 'silu',
+    #     num_class_embeds = num_classes,
+    #     projection_class_embeddings_input_dim=None,
+    #     time_embed_dim=1280,
+    #     timestep_input_dim=320
+    # )
+    # Load existing UNet config
+    unet_config = UNet2DConditionModel.load_config(args.pretrained_model_name_or_path, subfolder="unet")
+
+    # Modify parameters (Example: change attention head count or class embeddings)
+    unet_config['class_embed_type'] = None 
+    unet_config['num_class_embeds'] = num_classes
+    unet_config['class_embeddings_concat'] = True
+
+    # Re-initialize the UNet with the modified config
+    unet = UNet2DConditionModel.from_config(unet_config)
+
     # freeze parameters of models to save more memory
     unet.requires_grad_(False)
     vae.requires_grad_(False)
@@ -836,7 +847,6 @@ def main():
         # Only show the progress bar once on each machine.
         disable=not accelerator.is_local_main_process,
     )
-    fid_metrics = {}
     for epoch in range(first_epoch, args.num_train_epochs):
         unet.train()
         train_loss = 0.0
@@ -973,27 +983,6 @@ def main():
 
                         logger.info(f"Saved state to {save_path}")
 
-                        #now we will compute the FID score if given green light on the validation prompt
-                        if args.eval_fid:
-                            orig_images_path = args.original_image_path
-                            gen_images_path = args.gen_image_path
-                            from fid_utils import count_images, generate_images, compute_fid
-                            num_images = count_images(orig_images_path)
-
-                            pipeline = DiffusionPipeline.from_pretrained(
-                                args.pretrained_model_name_or_path,
-                                unet=unwrapped_unet,
-                                revision=args.revision,
-                                variant=args.variant,
-                                torch_dtype=weight_dtype,
-                            )
-
-                            generate_images(pipeline, args, global_step, accelerator, epoch, num_images)
-                            fid = compute_fid(args, global_step)
-                            results = {}
-                            results['epoch'] = epoch
-                            results['fid'] = fid
-                            fid_metrics[global_step] = results 
 
 
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
@@ -1065,8 +1054,26 @@ def main():
 
     accelerator.end_training()
 
+def make_space():
+    import os
+    import subprocess
+
+    # Get running GPU processes
+    gpu_processes = subprocess.check_output("nvidia-smi --query-compute-apps=pid --format=csv,noheader", shell=True)
+    gpu_processes = gpu_processes.decode("utf-8").strip().split("\n")
+
+    # Kill each process
+    for pid in gpu_processes:
+        try:
+            print(f"Killing GPU process with PID: {pid}")
+            os.system(f"kill -9 -f {pid}")
+        except Exception as e:
+            print(f"Error killing process {pid}: {e}")
+
+
 
 if __name__ == "__main__":
+    make_space()
     main()
 
 

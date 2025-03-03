@@ -137,7 +137,8 @@ def log_validation(
 
     with autocast_ctx:
         for _ in range(args.num_validation_images):
-            images.append(pipeline(args.validation_prompt, height = args.resolution, width = args.resolution, num_inference_steps=50, generator=generator, class_label_idx = torch.tensor(10).to(accelerator.device)).images[0])
+            class_label = torch.tensor(9).to(accelerator.device)
+            images.append(pipeline(args.validation_prompt, height = args.resolution, width = args.resolution, num_inference_steps=50, generator=generator, class_label_idx = class_label).images[0])
 
     for tracker in accelerator.trackers:
         phase_name = "test" if is_final_validation else "validation"

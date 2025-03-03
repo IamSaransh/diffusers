@@ -1050,7 +1050,6 @@ class StableDiffusionPipeline(
                     return_dict=False,
 
                 )[0]
-                print(i)
                 # perform guidance
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)

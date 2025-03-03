@@ -138,6 +138,7 @@ def log_validation(
     with autocast_ctx:
         for _ in range(args.num_validation_images):
             class_label = torch.tensor(9).to(accelerator.device)
+            print(class_label)
             images.append(pipeline(args.validation_prompt, height = args.resolution, width = args.resolution, num_inference_steps=50, generator=generator, class_label_idx = class_label).images[0])
 
     for tracker in accelerator.trackers:
@@ -1028,25 +1029,24 @@ def main():
         # Load previous pipeline
         if args.validation_prompt is not None:
             print("Running final validation dummy")
-            # pipeline = DiffusionPipeline.from_pretrained(
-            #     args.pretrained_model_name_or_path,
-            #     revision=args.revision,
-            #     variant=args.variant,
-            #     torch_dtype=weight_dtype,
-            # )
+            pipeline = DiffusionPipeline.from_pretrained(
+                args.pretrained_model_name_or_path,
+                revision=args.revision,
+                variant=args.variant,
+                torch_dtype=weight_dtype,
+            )
 
-            # # load attention processors
-            # pipeline.load_lora_weights(args.output_dir)
+            # load attention processors
+            pipeline.load_lora_weights(args.output_dir)
 
-            # # run inference
-            # images = log_validation(pipeline, args, accelerator, epoch, is_final_validation=True)
+            # run inference
+            images = log_validation(pipeline, args, accelerator, epoch, is_final_validation=True)
 
         #creaate a json with the fid scores as the valisation occurs
         if args.push_to_hub:
             save_model_card(
                 repo_id,
-                images=None,
-                # images=images,
+                images=images,
                 base_model=args.pretrained_model_name_or_path,
                 dataset_name=args.dataset_name,
                 repo_folder=args.output_dir,

@@ -137,7 +137,7 @@ def log_validation(
 
     with autocast_ctx:
         for _ in range(args.num_validation_images):
-            images.append(pipeline(args.validation_prompt, num_inference_steps=30, generator=generator).images[0])
+            images.append(pipeline(args.validation_prompt, height = args.resolution, width = args.resolution, num_inference_steps=50, generator=generator, class_label_idx = torch.tensor(10).to(accelerator.device)).images[0])
 
     for tracker in accelerator.trackers:
         phase_name = "test" if is_final_validation else "validation"
@@ -549,7 +549,6 @@ def main():
     # Modify parameters (Example: change attention head count or class embeddings)
     unet_config['class_embed_type'] = None 
     unet_config['num_class_embeds'] = num_classes
-    unet_config['class_embeddings_concat'] = True
 
     # Re-initialize the UNet with the modified config
     unet = UNet2DConditionModel.from_config(unet_config)
@@ -878,13 +877,6 @@ def main():
 
                 # Concatenate class embeddings with the text embedding
                 class_label_indices = batch["class_label_index"]
-                # class_label_indices = class_embed_layer(class_label_indices).to(accelerator.device)
-                # class_embeds = class_embed_layer(class_label_indices,class_embedding_dim)
-                # class_embeds = class_embeds.unsqueeze(1).expand(-1, encoder_hidden_states.size(1), -1) # expand class embeddings to match the shape of encoder_hidden_states
-                # print(f"Class Embeds: {class_embeds.shape}")
-                # print(f"encoder_hidden_states = {encoder_hidden_states.shape}")
-                # encoder_hidden_states = torch.cat([encoder_hidden_states, class_embeds], dim=-1)
-                # encoder_hidden_states = encoder_hidden_states
 
 
                 # Get the target for loss depending on the prediction type
@@ -988,22 +980,34 @@ def main():
             logs = {"step_loss": loss.detach().item(), "lr": lr_scheduler.get_last_lr()[0]}
             progress_bar.set_postfix(**logs)
 
+            # pipeline = DiffusionPipeline.from_pretrained(
+            #         args.pretrained_model_name_or_path,
+            #         unet=unwrap_model(unet),
+            #         revision=args.revision,
+            #         variant=args.variant,
+            #         torch_dtype=weight_dtype,
+            #     )
+            # images = log_validation(pipeline, args, accelerator, epoch)
+
+            # del pipeline
+            # torch.cuda.empty_cache()
+
             if global_step >= args.max_train_steps:
                 break
 
         if accelerator.is_main_process:
             if args.validation_prompt is not None and epoch % args.validation_epochs == 0:
                 # create pipeline
-                # pipeline = DiffusionPipeline.from_pretrained(
-                #     args.pretrained_model_name_or_path,
-                #     unet=unwrap_model(unet),
-                #     revision=args.revision,
-                #     variant=args.variant,
-                #     torch_dtype=weight_dtype,
-                # )
-                # images = log_validation(pipeline, args, accelerator, epoch)
+                pipeline = DiffusionPipeline.from_pretrained(
+                    args.pretrained_model_name_or_path,
+                    unet=unwrap_model(unet),
+                    revision=args.revision,
+                    variant=args.variant,
+                    torch_dtype=weight_dtype,
+                )
+                images = log_validation(pipeline, args, accelerator, epoch)
 
-                # del pipeline
+                del pipeline
                 torch.cuda.empty_cache()
 
     # Save the lora layers

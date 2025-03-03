@@ -32,8 +32,8 @@
           "--gradient_checkpointing",
           "--checkpointing_steps=1000",
           "--mixed_precision=fp16",
-          "--gradient_checkpointing",
-          "--use_8bit_adam"
+          "--use_8bit_adam",
+          "--report_to=wandb"
         ],
         "env": {
           "PYTHONPATH": "${workspaceFolder}",

@@ -784,6 +784,7 @@ class StableDiffusionPipeline(
         width: Optional[int] = None,
         num_inference_steps: int = 50,
         timesteps: List[int] = None,
+        class_label_idx: Optional[torch.Tensor] = None,
         sigmas: List[float] = None,
         guidance_scale: float = 7.5,
         negative_prompt: Optional[Union[str, List[str]]] = None,
@@ -945,6 +946,7 @@ class StableDiffusionPipeline(
         self._clip_skip = clip_skip
         self._cross_attention_kwargs = cross_attention_kwargs
         self._interrupt = False
+        self.class_label_idx = class_label_idx
 
         # 2. Define call parameters
         if prompt is not None and isinstance(prompt, str):
@@ -1042,11 +1044,13 @@ class StableDiffusionPipeline(
                     t,
                     encoder_hidden_states=prompt_embeds,
                     timestep_cond=timestep_cond,
+                    class_labels = class_label_idx,
                     cross_attention_kwargs=self.cross_attention_kwargs,
                     added_cond_kwargs=added_cond_kwargs,
                     return_dict=False,
-                )[0]
 
+                )[0]
+                print(i)
                 # perform guidance
                 if self.do_classifier_free_guidance:
                     noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)

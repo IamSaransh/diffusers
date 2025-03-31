@@ -1,0 +1,63 @@
+params_common:
+  pretrained_model_name_or_path: "stable-diffusion-v1-5/stable-diffusion-v1-5"
+  snr_gamma: 5.0
+  resolution: 512
+  train_batch_size: 4
+  max_train_steps: 4000
+  learning_rate: 1e-06
+  lr_scheduler: "cosine"
+  lr_warmup_steps: 500
+  instance_prompt: "a photo of sks leaf"
+  checkpointing_steps: 500
+  report_to: all
+  seed: 1337
+classes:
+  - name: "Yellow_Mosaic_Virus"
+    params_indv:
+      instance_data_dir: "/data/dataset/SoyMulticlass_Dataset/Yellow_Mosaic_Virus_512/"
+      validation_prompt_detailed: >
+        A close-up photo of a soybean leaf suffering from ymv disease, being held in a hand's fingers in an agricultural field. 
+        The leaf has distinct yellow mosaic patterns, with irregular patches and green veins. 
+        Other soybean plants with similar symptoms are visible in the blurred background.
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/soy_bean/ymv"
+      hub_model_id: "sb_db_ymv_v2"
+
+  - name: "Areal_Blight"
+    params:
+      instance_data_dir: "/data/dataset/SoyMulticlass_Dataset/Aerial_Blight_512/"
+      validation_prompt: >
+        A close-up photo of a soybean leaf affected by rust disease, showing orange-brown pustules on the surface. 
+        The background contains other soybean plants with similar symptoms.
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/soy_bean/rust"
+      hub_model_id: "sb_db_rust_v2"
+
+  - name: "Anthracnose"
+    params:
+      instance_data_dir: "/data/dataset/SoyMulticlass_Dataset/Anthracnose_512/"
+      validation_prompt: >
+        A close-up photo of a soybean leaf suffering from blight disease, with brown lesions and yellowing edges. 
+        The background shows other affected plants in an agricultural field.
+      output_dir: "/data/march/dreambooth/soy_bean/blight"
+      hub_model_id: "sb_db_blight_v2"
+
+  - name: "Bacterial_Pustule"
+    params:
+      instance_data_dir: "/data/dataset/SoyMulticlass_Dataset/Bacterial_Pustule_512/"
+      validation_prompt: >
+        A close-up image of a soybean plant suffering from wilt disease, with drooping leaves and discoloration. 
+        The surrounding plants appear similarly affected in the blurred background.
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/soy_bean/wilt"
+      hub_model_id: "sb_db_wilt_v2"
+
+  - name: "Healthy"
+    params:
+      instance_data_dir: "/data/dataset/SoyMulticlass_Dataset/Healthy_512/"
+      validation_prompt: >
+        A close-up photo of a soybean leaf showing symptoms of leaf spot disease, with small circular spots scattered across the surface. 
+        Other leaves with similar symptoms are visible in the background.
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/soy_bean/leaf_spot"
+      hub_model_id: "sb_db_leaf_spot_v2"

@@ -482,7 +482,7 @@ def main():
         mixed_precision=args.mixed_precision,
         log_with=args.report_to,
         project_config=accelerator_project_config,
-        cpu=True
+        # cpu=True
     )
 
     # Disable AMP for MPS.
@@ -724,7 +724,8 @@ def main():
         if args.max_train_samples is not None:
             dataset["train"] = dataset["train"].shuffle(seed=args.seed).select(range(args.max_train_samples))
         # Set the training transforms
-        train_dataset = dataset["train"].with_transform(preprocess_train)
+        # train_dataset = dataset["train"].with_transform(preprocess_train) #use on linux
+        train_dataset = dataset["train"].map(preprocess_train, batched=True, num_proc=1) #use on windows
 
     def collate_fn(examples):
         pixel_values = torch.stack([example["pixel_values"] for example in examples])
@@ -1067,6 +1068,8 @@ def main():
 
 
 if __name__ == "__main__":
+    import multiprocessing
+    multiprocessing.set_start_method("spawn", force=True)
     main()
 
 

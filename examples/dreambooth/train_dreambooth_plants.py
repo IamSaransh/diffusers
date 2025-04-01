@@ -608,15 +608,10 @@ def parse_args(input_args=None):
 
 
 class DreamBoothDataset(Dataset):
-    """
-    A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
-    It pre-processes the images and the tokenizes prompts.
-    """
-
     def __init__(
         self,
-        instance_data_root,
-        instance_prompt,
+        instance_data_roots,
+        instance_prompts,
         tokenizer,
         class_data_root=None,
         class_prompt=None,
@@ -634,76 +629,82 @@ class DreamBoothDataset(Dataset):
         self.class_prompt_encoder_hidden_states = class_prompt_encoder_hidden_states
         self.tokenizer_max_length = tokenizer_max_length
 
-        self.instance_data_root = Path(instance_data_root)
-        if not self.instance_data_root.exists():
-            raise ValueError(f"Instance {self.instance_data_root} images root doesn't exists.")
+        if not isinstance(instance_data_roots, list) or not isinstance(instance_prompts, list):
+            raise ValueError("instance_data_roots and instance_prompts must be lists of same length")
+        if len(instance_data_roots) != len(instance_prompts):
+            raise ValueError("Mismatch between number of instance folders and prompts")
 
-        self.instance_images_path = list(Path(instance_data_root).iterdir())
+        self.instance_data_roots = [Path(root) for root in instance_data_roots]
+        for root in self.instance_data_roots:
+            if not root.exists():
+                raise ValueError(f"Instance folder {root} doesn't exist.")
+
+        self.instance_prompts = instance_prompts
+        
+        self.instance_images_path = []
+        self.instance_prompt_map = []
+        for root, prompt in zip(self.instance_data_roots, self.instance_prompts):
+            images = list(root.iterdir())
+            self.instance_images_path.extend(images)
+            self.instance_prompt_map.extend([prompt] * len(images))
+        
         self.num_instance_images = len(self.instance_images_path)
-        self.instance_prompt = instance_prompt
         self._length = self.num_instance_images
 
         if class_data_root is not None:
             self.class_data_root = Path(class_data_root)
             self.class_data_root.mkdir(parents=True, exist_ok=True)
             self.class_images_path = list(self.class_data_root.iterdir())
-            if class_num is not None:
-                self.num_class_images = min(len(self.class_images_path), class_num)
-            else:
-                self.num_class_images = len(self.class_images_path)
+            self.num_class_images = min(len(self.class_images_path), class_num) if class_num else len(self.class_images_path)
             self._length = max(self.num_class_images, self.num_instance_images)
             self.class_prompt = class_prompt
         else:
             self.class_data_root = None
 
-        self.image_transforms = transforms.Compose(
-            [
-                transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
-                transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
-                transforms.ToTensor(),
-                transforms.Normalize([0.5], [0.5]),
-            ]
-        )
+        self.image_transforms = transforms.Compose([
+            transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
+            transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
+            transforms.ToTensor(),
+            transforms.Normalize([0.5], [0.5]),
+        ])
 
     def __len__(self):
         return self._length
 
     def __getitem__(self, index):
         example = {}
-        instance_image = Image.open(self.instance_images_path[index % self.num_instance_images])
+        instance_image_path = self.instance_images_path[index % self.num_instance_images]
+        instance_prompt = self.instance_prompt_map[index % self.num_instance_images]
+        
+        instance_image = Image.open(instance_image_path)
         instance_image = exif_transpose(instance_image)
-
-        if not instance_image.mode == "RGB":
+        if instance_image.mode != "RGB":
             instance_image = instance_image.convert("RGB")
         example["instance_images"] = self.image_transforms(instance_image)
 
         if self.encoder_hidden_states is not None:
             example["instance_prompt_ids"] = self.encoder_hidden_states
         else:
-            text_inputs = tokenize_prompt(
-                self.tokenizer, self.instance_prompt, tokenizer_max_length=self.tokenizer_max_length
-            )
+            text_inputs = tokenize_prompt(self.tokenizer, instance_prompt, tokenizer_max_length=self.tokenizer_max_length)
             example["instance_prompt_ids"] = text_inputs.input_ids
             example["instance_attention_mask"] = text_inputs.attention_mask
 
         if self.class_data_root:
             class_image = Image.open(self.class_images_path[index % self.num_class_images])
             class_image = exif_transpose(class_image)
-
-            if not class_image.mode == "RGB":
+            if class_image.mode != "RGB":
                 class_image = class_image.convert("RGB")
             example["class_images"] = self.image_transforms(class_image)
 
             if self.class_prompt_encoder_hidden_states is not None:
                 example["class_prompt_ids"] = self.class_prompt_encoder_hidden_states
             else:
-                class_text_inputs = tokenize_prompt(
-                    self.tokenizer, self.class_prompt, tokenizer_max_length=self.tokenizer_max_length
-                )
+                class_text_inputs = tokenize_prompt(self.tokenizer, self.class_prompt, tokenizer_max_length=self.tokenizer_max_length)
                 example["class_prompt_ids"] = class_text_inputs.input_ids
                 example["class_attention_mask"] = class_text_inputs.attention_mask
 
         return example
+
 
 
 def collate_fn(examples, with_prior_preservation=False):
@@ -859,9 +860,12 @@ def main(args):
     # Generate class images if prior preservation is enabled.
     if args.with_prior_preservation:
         class_images_dir = Path(args.class_data_dir)
+        print(f"class dir={class_images_dir}")
         if not class_images_dir.exists():
+            print('class image dir doesn;t exisit')
             class_images_dir.mkdir(parents=True)
         cur_class_images = len(list(class_images_dir.iterdir()))
+        print(f"cur_class_images={cur_class_images}")
 
         if cur_class_images < args.num_class_images:
             torch_dtype = torch.float16 if accelerator.device.type == "cuda" else torch.float32
@@ -1092,8 +1096,8 @@ def main(args):
 
     # Dataset and DataLoaders creation:
     train_dataset = DreamBoothDataset(
-        instance_data_root=args.instance_data_dir,
-        instance_prompt=args.instance_prompt,
+        instance_data_roots=args.instance_data_dir.split(";"),
+        instance_prompts=args.instance_prompt.split(";"),
         class_data_root=args.class_data_dir if args.with_prior_preservation else None,
         class_prompt=args.class_prompt,
         class_num=args.num_class_images,
@@ -1254,6 +1258,9 @@ def main(args):
                 if args.pre_compute_text_embeddings:
                     encoder_hidden_states = batch["input_ids"]
                 else:
+                    if "input_ids" in batch:
+                        instance_prompts = [tokenizer.decode(ids, skip_special_tokens=True) for ids in batch["input_ids"]]
+                        print("Instance Prompts:", instance_prompts)
                     encoder_hidden_states = encode_prompt(
                         text_encoder,
                         batch["input_ids"],
@@ -1452,46 +1459,49 @@ def merge_args(base_args, class_args):
     return Namespace(**args_dict)
 
 if __name__ == "__main__":
-    # Load base arguments
-    base_args = parse_args()
+    # # Load base arguments
+    # base_args = parse_args()
     
-    # Load YAML config
-    config = load_config('your_config.yaml')  # Update with actual path
+    # # Load YAML config
+    # config = load_config('your_config.yaml')  # Update with actual path
     
-    # Extract common parameters
-    common_params = config.get('params_common', {})
+    # # Extract common parameters
+    # common_params = config.get('params_common', {})
     
-    # Process each class
-    for class_config in config['classes']:
-        # Merge common params with class-specific params
-        class_params = {**common_params, **class_config.get('params', {})}
+    # # Process each class
+    # for class_config in config['classes']:
+    #     # Merge common params with class-specific params
+    #     class_params = {**common_params, **class_config.get('params', {})}
         
-        # Create updated args namespace
-        class_args = merge_args(base_args, class_params)
+    #     # Create updated args namespace
+    #     class_args = merge_args(base_args, class_params)
         
-        # Run training for this class
-        main(class_args)
+    #     # Run training for this class
+    #     main(class_args)
 
 
 
-if __name__ == "__main__":
-    base_args = parse_args()
+# if __name__ == "__main__":
+    # base_args = parse_args()
     
-    # Load YAML config
-    config = load_config('your_config.yaml')  # Update with actual path
+    # # Load YAML config
+    # config = load_config('your_config.yaml')  # Update with actual path
     
-    # Extract common parameters
-    common_params = config.get('params_common', {})
+    # # Extract common parameters
+    # common_params = config.get('params_common', {})
     
-    # Process each class
-    for class_config in config['classes']:
-        # Merge common params with class-specific params
-        class_params = {**common_params, **class_config.get('params', {})}
+    # # Process each class
+    # for class_config in config['classes']:
+    #     # Merge common params with class-specific params
+    #     class_params = {**common_params, **class_config.get('params', {})}
         
-        # Create updated args namespace
-        class_args = merge_args(base_args, class_params)
+    #     # Create updated args namespace
+    #     class_args = merge_args(base_args, class_params)
         
-        # Run training for this class
-        main(class_args)
-    # args = parse_args()
-    # main(args)
+    #     # Run training for this class
+    #     main(class_args)
+    # # args = parse_args()
+    # # main(args)
+
+    args = parse_args()
+    main(args)

@@ -1461,7 +1461,7 @@ def load_config(config_path):
 
 if __name__ == "__main__":
     args = parse_args()
-    config = load_config('/home/saranshvashistha/workspace/diffusers/examples/dreambooth/params2.yaml')
+    config = load_config('/data/march/diffusers/examples/dreambooth/params2.yaml')
     common_params = config["params_common"]
     
     for cls in config["classes"]:

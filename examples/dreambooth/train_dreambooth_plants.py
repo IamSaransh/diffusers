@@ -1460,6 +1460,7 @@ def load_config(config_path):
         return config
 
 if __name__ == "__main__":
+    print("starting")
     import argparse
     import yaml
     from pprint import pprint

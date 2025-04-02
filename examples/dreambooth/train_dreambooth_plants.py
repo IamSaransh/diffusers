@@ -1263,9 +1263,9 @@ def main(args, newargs):
                 if args.pre_compute_text_embeddings:
                     encoder_hidden_states = batch["input_ids"]
                 else:
-                    if "input_ids" in batch:
-                        instance_prompts = [tokenizer.decode(ids, skip_special_tokens=True) for ids in batch["input_ids"]]
-                        print("Instance Prompts:", instance_prompts)
+                    # if "input_ids" in batch:
+                    #     instance_prompts = [tokenizer.decode(ids, skip_special_tokens=True) for ids in batch["input_ids"]]
+                    #     print("Instance Prompts:", instance_prompts)
                     encoder_hidden_states = encode_prompt(
                         text_encoder,
                         batch["input_ids"],

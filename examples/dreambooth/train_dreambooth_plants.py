@@ -1453,7 +1453,8 @@ def main(args, newargs):
 
 
 import yaml
-
+import argparse
+from pprint import pprint
 def load_config(config_path):
         with open(config_path, "r") as f:
             config = yaml.safe_load(f)
@@ -1461,36 +1462,19 @@ def load_config(config_path):
 
 if __name__ == "__main__":
     print("starting")
-    import argparse
-    import yaml
-    from pprint import pprint
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    return parser.parse_args()
-
-def load_config(path):
-    with open(path, "r") as f:
-        return yaml.safe_load(f)
-
+    
     args = parse_args()
     config = load_config('/data/march/diffusers/examples/dreambooth/params2.yaml')
-    # config = load_config('/home/saranshvashistha/workspace/diffusers/examples/dreambooth/params2.yaml')
     common_params = config["params_common"]
-
+    
     for cls in config["classes"]:
         class_params = cls["params_indv"]
-        
-        print(f"\n=== Processing Class: {cls} ===\n")
-        
-        print("Full Config:")
-        pprint(config, sort_dicts=False)
+        print(f"class = {cls}")
+        print(config)
         
         # Create new args dictionary
         new_args = argparse.Namespace(**common_params, **class_params)
-        
         print("\nGenerated New Args:")
         pprint(vars(new_args), sort_dicts=False)
-        
         main(args, newargs=new_args)
 

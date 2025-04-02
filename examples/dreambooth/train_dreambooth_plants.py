@@ -1430,8 +1430,10 @@ def main(args, newargs):
         pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
 
         pipeline.save_pretrained(newargs.output_dir)
-
+        if(not args.push_to_hub):
+            print("push to hub not enabled, skipping the model push")
         if args.push_to_hub:
+            print("pusing to hub")
             save_model_card(
                 repo_id,
                 images=images,

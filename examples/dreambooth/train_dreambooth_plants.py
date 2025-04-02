@@ -621,7 +621,7 @@ class DreamBoothDataset(Dataset):
         class_data_root=None,
         class_prompt=None,
         class_num=None,
-        size=512,
+        size=256,
         center_crop=False,
         encoder_hidden_states=None,
         class_prompt_encoder_hidden_states=None,
@@ -810,9 +810,9 @@ def main(args, newargs):
             " Please use `huggingface-cli login` to authenticate with the Hub."
         )
 
-    logging_dir = Path(args.output_dir, args.logging_dir)
+    logging_dir = Path(newargs.output_dir, args.logging_dir)
 
-    accelerator_project_config = ProjectConfiguration(project_dir=args.output_dir, logging_dir=logging_dir)
+    accelerator_project_config = ProjectConfiguration(project_dir=newargs.output_dir, logging_dir=logging_dir)
 
     accelerator = Accelerator(
         gradient_accumulation_steps=args.gradient_accumulation_steps,
@@ -914,11 +914,11 @@ def main(args, newargs):
     # Handle the repository creation
     if accelerator.is_main_process:
         if newargs.output_dir is not None:
-            os.makedirs(args.output_dir, exist_ok=True)
+            os.makedirs(newargs.output_dir, exist_ok=True)
 
         if args.push_to_hub:
             repo_id = create_repo(
-                repo_id=newargs.hub_model_id or Path(args.output_dir).name, exist_ok=True, token=args.hub_token
+                repo_id=newargs.hub_model_id or Path(newargs.output_dir).name, exist_ok=True, token=args.hub_token
             ).repo_id
 
     # Load the tokenizer
@@ -1107,7 +1107,7 @@ def main(args, newargs):
         class_prompt=args.class_prompt if args.with_prior_preservation else None,
         class_num=args.num_class_images if args.with_prior_preservation else None,
         tokenizer=tokenizer,
-        size=newargs.resolution,
+        size=int(newargs.resolution),
         center_crop=args.center_crop,
         encoder_hidden_states=pre_computed_encoder_hidden_states,
         class_prompt_encoder_hidden_states=pre_computed_class_prompt_encoder_hidden_states,
@@ -1197,7 +1197,7 @@ def main(args, newargs):
             path = os.path.basename(args.resume_from_checkpoint)
         else:
             # Get the most recent checkpoint
-            dirs = os.listdir(args.output_dir)
+            dirs = os.listdir(newargs.output_dir)
             dirs = [d for d in dirs if d.startswith("checkpoint")]
             dirs = sorted(dirs, key=lambda x: int(x.split("-")[1]))
             path = dirs[-1] if len(dirs) > 0 else None
@@ -1210,7 +1210,7 @@ def main(args, newargs):
             initial_global_step = 0
         else:
             accelerator.print(f"Resuming from checkpoint {path}")
-            accelerator.load_state(os.path.join(args.output_dir, path))
+            accelerator.load_state(os.path.join(newargs.output_dir, path))
             global_step = int(path.split("-")[1])
 
             initial_global_step = global_step
@@ -1352,7 +1352,7 @@ def main(args, newargs):
                     if global_step % args.checkpointing_steps == 0:
                         # _before_ saving state, check if this save would set us over the `checkpoints_total_limit`
                         if args.checkpoints_total_limit is not None:
-                            checkpoints = os.listdir(args.output_dir)
+                            checkpoints = os.listdir(newargs.output_dir)
                             checkpoints = [d for d in checkpoints if d.startswith("checkpoint")]
                             checkpoints = sorted(checkpoints, key=lambda x: int(x.split("-")[1]))
 
@@ -1367,10 +1367,10 @@ def main(args, newargs):
                                 logger.info(f"removing checkpoints: {', '.join(removing_checkpoints)}")
 
                                 for removing_checkpoint in removing_checkpoints:
-                                    removing_checkpoint = os.path.join(args.output_dir, removing_checkpoint)
+                                    removing_checkpoint = os.path.join(newargs.output_dir, removing_checkpoint)
                                     shutil.rmtree(removing_checkpoint)
 
-                        save_path = os.path.join(args.output_dir, f"checkpoint-{global_step}")
+                        save_path = os.path.join(newargs.output_dir, f"checkpoint-{global_step}")
                         accelerator.save_state(save_path)
                         logger.info(f"Saved state to {save_path}")
 
@@ -1429,7 +1429,7 @@ def main(args, newargs):
 
         pipeline.scheduler = pipeline.scheduler.from_config(pipeline.scheduler.config, **scheduler_args)
 
-        pipeline.save_pretrained(args.output_dir)
+        pipeline.save_pretrained(newargs.output_dir)
 
         if args.push_to_hub:
             save_model_card(
@@ -1460,16 +1460,36 @@ def load_config(config_path):
         return config
 
 if __name__ == "__main__":
+    import argparse
+    import yaml
+    from pprint import pprint
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    return parser.parse_args()
+
+def load_config(path):
+    with open(path, "r") as f:
+        return yaml.safe_load(f)
+
     args = parse_args()
     config = load_config('/data/march/diffusers/examples/dreambooth/params2.yaml')
+    # config = load_config('/home/saranshvashistha/workspace/diffusers/examples/dreambooth/params2.yaml')
     common_params = config["params_common"]
-    
+
     for cls in config["classes"]:
         class_params = cls["params_indv"]
-        print(f"class = {cls}")
-        print(config)
+        
+        print(f"\n=== Processing Class: {cls} ===\n")
+        
+        print("Full Config:")
+        pprint(config, sort_dicts=False)
         
         # Create new args dictionary
         new_args = argparse.Namespace(**common_params, **class_params)
-        print(new_args)
+        
+        print("\nGenerated New Args:")
+        pprint(vars(new_args), sort_dicts=False)
+        
         main(args, newargs=new_args)
+

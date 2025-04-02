@@ -24,7 +24,7 @@ classes:
     params_indv:
       instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Spider_mites_Two-spotted_spider_mite"
       validation_prompt: "a photo of sks leaf"
-      output_dir: "/data/march/dreambooth/Pv/Tomato___Spider_mites Two-spotted_spider_mite"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Spider_mites_Two-spotted_spider_mite"
       hub_model_id: "pv_smtssm_v1"
   
   - name: "Tomato___Late_blight"

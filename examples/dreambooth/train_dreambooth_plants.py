@@ -608,10 +608,15 @@ def parse_args(input_args=None):
 
 
 class DreamBoothDataset(Dataset):
+    """
+    A dataset to prepare the instance and class images with the prompts for fine-tuning the model.
+    It pre-processes the images and the tokenizes prompts.
+    """
+
     def __init__(
         self,
-        instance_data_roots,
-        instance_prompts,
+        instance_data_root,
+        instance_prompt,
         tokenizer,
         class_data_root=None,
         class_prompt=None,
@@ -629,82 +634,76 @@ class DreamBoothDataset(Dataset):
         self.class_prompt_encoder_hidden_states = class_prompt_encoder_hidden_states
         self.tokenizer_max_length = tokenizer_max_length
 
-        if not isinstance(instance_data_roots, list) or not isinstance(instance_prompts, list):
-            raise ValueError("instance_data_roots and instance_prompts must be lists of same length")
-        if len(instance_data_roots) != len(instance_prompts):
-            raise ValueError("Mismatch between number of instance folders and prompts")
+        self.instance_data_root = Path(instance_data_root)
+        if not self.instance_data_root.exists():
+            raise ValueError(f"Instance {self.instance_data_root} images root doesn't exists.")
 
-        self.instance_data_roots = [Path(root) for root in instance_data_roots]
-        for root in self.instance_data_roots:
-            if not root.exists():
-                raise ValueError(f"Instance folder {root} doesn't exist.")
-
-        self.instance_prompts = instance_prompts
-        
-        self.instance_images_path = []
-        self.instance_prompt_map = []
-        for root, prompt in zip(self.instance_data_roots, self.instance_prompts):
-            images = list(root.iterdir())
-            self.instance_images_path.extend(images)
-            self.instance_prompt_map.extend([prompt] * len(images))
-        
+        self.instance_images_path = list(Path(instance_data_root).iterdir())
         self.num_instance_images = len(self.instance_images_path)
+        self.instance_prompt = instance_prompt
         self._length = self.num_instance_images
 
         if class_data_root is not None:
             self.class_data_root = Path(class_data_root)
             self.class_data_root.mkdir(parents=True, exist_ok=True)
             self.class_images_path = list(self.class_data_root.iterdir())
-            self.num_class_images = min(len(self.class_images_path), class_num) if class_num else len(self.class_images_path)
+            if class_num is not None:
+                self.num_class_images = min(len(self.class_images_path), class_num)
+            else:
+                self.num_class_images = len(self.class_images_path)
             self._length = max(self.num_class_images, self.num_instance_images)
             self.class_prompt = class_prompt
         else:
             self.class_data_root = None
 
-        self.image_transforms = transforms.Compose([
-            transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
-            transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
-            transforms.ToTensor(),
-            transforms.Normalize([0.5], [0.5]),
-        ])
+        self.image_transforms = transforms.Compose(
+            [
+                transforms.Resize(size, interpolation=transforms.InterpolationMode.BILINEAR),
+                transforms.CenterCrop(size) if center_crop else transforms.RandomCrop(size),
+                transforms.ToTensor(),
+                transforms.Normalize([0.5], [0.5]),
+            ]
+        )
 
     def __len__(self):
         return self._length
 
     def __getitem__(self, index):
         example = {}
-        instance_image_path = self.instance_images_path[index % self.num_instance_images]
-        instance_prompt = self.instance_prompt_map[index % self.num_instance_images]
-        
-        instance_image = Image.open(instance_image_path)
+        instance_image = Image.open(self.instance_images_path[index % self.num_instance_images])
         instance_image = exif_transpose(instance_image)
-        if instance_image.mode != "RGB":
+
+        if not instance_image.mode == "RGB":
             instance_image = instance_image.convert("RGB")
         example["instance_images"] = self.image_transforms(instance_image)
 
         if self.encoder_hidden_states is not None:
             example["instance_prompt_ids"] = self.encoder_hidden_states
         else:
-            text_inputs = tokenize_prompt(self.tokenizer, instance_prompt, tokenizer_max_length=self.tokenizer_max_length)
+            text_inputs = tokenize_prompt(
+                self.tokenizer, self.instance_prompt, tokenizer_max_length=self.tokenizer_max_length
+            )
             example["instance_prompt_ids"] = text_inputs.input_ids
             example["instance_attention_mask"] = text_inputs.attention_mask
 
         if self.class_data_root:
             class_image = Image.open(self.class_images_path[index % self.num_class_images])
             class_image = exif_transpose(class_image)
-            if class_image.mode != "RGB":
+
+            if not class_image.mode == "RGB":
                 class_image = class_image.convert("RGB")
             example["class_images"] = self.image_transforms(class_image)
 
             if self.class_prompt_encoder_hidden_states is not None:
                 example["class_prompt_ids"] = self.class_prompt_encoder_hidden_states
             else:
-                class_text_inputs = tokenize_prompt(self.tokenizer, self.class_prompt, tokenizer_max_length=self.tokenizer_max_length)
+                class_text_inputs = tokenize_prompt(
+                    self.tokenizer, self.class_prompt, tokenizer_max_length=self.tokenizer_max_length
+                )
                 example["class_prompt_ids"] = class_text_inputs.input_ids
                 example["class_attention_mask"] = class_text_inputs.attention_mask
 
         return example
-
 
 
 def collate_fn(examples, with_prior_preservation=False):
@@ -804,7 +803,7 @@ def encode_prompt(text_encoder, input_ids, attention_mask, text_encoder_use_atte
     return prompt_embeds
 
 
-def main(args):
+def main(args, newargs):
     if args.report_to == "wandb" and args.hub_token is not None:
         raise ValueError(
             "You cannot use both --report_to=wandb and --hub_token due to a security risk of exposing your token."
@@ -856,6 +855,11 @@ def main(args):
     # If passed along, set the training seed now.
     if args.seed is not None:
         set_seed(args.seed)
+    import yaml
+    import argparse
+
+
+    
 
     # Generate class images if prior preservation is enabled.
     if args.with_prior_preservation:
@@ -909,12 +913,12 @@ def main(args):
 
     # Handle the repository creation
     if accelerator.is_main_process:
-        if args.output_dir is not None:
+        if newargs.output_dir is not None:
             os.makedirs(args.output_dir, exist_ok=True)
 
         if args.push_to_hub:
             repo_id = create_repo(
-                repo_id=args.hub_model_id or Path(args.output_dir).name, exist_ok=True, token=args.hub_token
+                repo_id=newargs.hub_model_id or Path(args.output_dir).name, exist_ok=True, token=args.hub_token
             ).repo_id
 
     # Load the tokenizer
@@ -1048,9 +1052,10 @@ def main(args):
     params_to_optimize = (
         itertools.chain(unet.parameters(), text_encoder.parameters()) if args.train_text_encoder else unet.parameters()
     )
+    print(newargs.learning_rate)
     optimizer = optimizer_class(
         params_to_optimize,
-        lr=args.learning_rate,
+        lr=float(newargs.learning_rate),
         betas=(args.adam_beta1, args.adam_beta2),
         weight_decay=args.adam_weight_decay,
         eps=args.adam_epsilon,
@@ -1073,7 +1078,7 @@ def main(args):
         pre_computed_encoder_hidden_states = compute_text_embeddings(args.instance_prompt)
         validation_prompt_negative_prompt_embeds = compute_text_embeddings("")
 
-        if args.validation_prompt is not None:
+        if newargs.validation_prompt is not None:
             validation_prompt_encoder_hidden_states = compute_text_embeddings(args.validation_prompt)
         else:
             validation_prompt_encoder_hidden_states = None
@@ -1096,13 +1101,13 @@ def main(args):
 
     # Dataset and DataLoaders creation:
     train_dataset = DreamBoothDataset(
-        instance_data_roots=args.instance_data_dir.split(";"),
-        instance_prompts=args.instance_prompt.split(";"),
-        class_data_root=args.class_data_dir if args.with_prior_preservation else None,
-        class_prompt=args.class_prompt,
-        class_num=args.num_class_images,
+        instance_data_root=newargs.instance_data_dir,
+        instance_prompt=newargs.instance_prompt,
+        class_data_root=newargs.class_data_dir if args.with_prior_preservation else None,
+        class_prompt=args.class_prompt if args.with_prior_preservation else None,
+        class_num=args.num_class_images if args.with_prior_preservation else None,
         tokenizer=tokenizer,
-        size=args.resolution,
+        size=newargs.resolution,
         center_crop=args.center_crop,
         encoder_hidden_states=pre_computed_encoder_hidden_states,
         class_prompt_encoder_hidden_states=pre_computed_class_prompt_encoder_hidden_states,
@@ -1111,7 +1116,7 @@ def main(args):
 
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
-        batch_size=args.train_batch_size,
+        batch_size=newargs.train_batch_size,
         shuffle=True,
         collate_fn=lambda examples: collate_fn(examples, args.with_prior_preservation),
         num_workers=args.dataloader_num_workers,
@@ -1430,78 +1435,38 @@ def main(args):
             save_model_card(
                 repo_id,
                 images=images,
-                base_model=args.pretrained_model_name_or_path,
+                base_model=newargs.pretrained_model_name_or_path,
                 train_text_encoder=args.train_text_encoder,
-                prompt=args.instance_prompt,
-                repo_folder=args.output_dir,
+                prompt=newargs.instance_prompt,
+                repo_folder=newargs.output_dir,
                 pipeline=pipeline,
             )
             upload_folder(
                 repo_id=repo_id,
-                folder_path=args.output_dir,
+                folder_path=newargs.output_dir,
                 commit_message="End of training",
                 ignore_patterns=["step_*", "epoch_*"],
             )
 
     accelerator.end_training()
 
+
+
 import yaml
-from argparse import Namespace
 
 def load_config(config_path):
-    with open(config_path, 'r') as f:
-        return yaml.safe_load(f)
-
-def merge_args(base_args, class_args):
-    """Merge common parameters with class-specific parameters"""
-    args_dict = vars(base_args)
-    args_dict.update(class_args)
-    return Namespace(**args_dict)
+        with open(config_path, "r") as f:
+            config = yaml.safe_load(f)
+        return config
 
 if __name__ == "__main__":
-    # # Load base arguments
-    # base_args = parse_args()
-    
-    # # Load YAML config
-    # config = load_config('your_config.yaml')  # Update with actual path
-    
-    # # Extract common parameters
-    # common_params = config.get('params_common', {})
-    
-    # # Process each class
-    # for class_config in config['classes']:
-    #     # Merge common params with class-specific params
-    #     class_params = {**common_params, **class_config.get('params', {})}
-        
-    #     # Create updated args namespace
-    #     class_args = merge_args(base_args, class_params)
-        
-    #     # Run training for this class
-    #     main(class_args)
-
-
-
-# if __name__ == "__main__":
-    # base_args = parse_args()
-    
-    # # Load YAML config
-    # config = load_config('your_config.yaml')  # Update with actual path
-    
-    # # Extract common parameters
-    # common_params = config.get('params_common', {})
-    
-    # # Process each class
-    # for class_config in config['classes']:
-    #     # Merge common params with class-specific params
-    #     class_params = {**common_params, **class_config.get('params', {})}
-        
-    #     # Create updated args namespace
-    #     class_args = merge_args(base_args, class_params)
-        
-    #     # Run training for this class
-    #     main(class_args)
-    # # args = parse_args()
-    # # main(args)
-
     args = parse_args()
-    main(args)
+    config = load_config('/home/saranshvashistha/workspace/diffusers/examples/dreambooth/params2.yaml')
+    common_params = config["params_common"]
+    
+    for cls in config["classes"]:
+        class_params = cls["params_indv"]
+        
+        # Create new args dictionary
+        new_args = argparse.Namespace(**common_params, **class_params)
+        main(args, newargs=new_args)

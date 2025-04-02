@@ -1,0 +1,84 @@
+params_common:
+  pretrained_model_name_or_path: "stable-diffusion-v1-5/stable-diffusion-v1-5"
+  snr_gamma: 5.0
+  resolution: 256
+  train_batch_size: 4
+  max_train_steps: 3000
+  learning_rate: 1e-06
+  lr_scheduler: "cosine"
+  lr_warmup_steps: 500
+  instance_prompt: "a photo of sks leaf"
+  checkpointing_steps: 500
+  report_to: all
+  seed: 42
+
+classes:
+  - name: "Tomato___Tomato_mosaic_virus"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Tomato_mosaic_virus"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Tomato_mosaic_virus"
+      hub_model_id: "pv_tmv_v1"
+  
+  - name: "Tomato___Spider_mites_Two-spotted_spider_mite"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Spider_mites_Two-spotted_spider_mite"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Spider_mites_Two-spotted_spider_mite"
+      hub_model_id: "pv_smtssm_v1"
+  
+  - name: "Tomato___Late_blight"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Late_blight"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Late_blight"
+      hub_model_id: "pv_lb_v1"
+  
+  - name: "Tomato___Early_blight"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Early_blight"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Early_blight"
+      hub_model_id: "pv_eb_v1"
+  
+  - name: "Tomato___Target_Spot"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Target_Spot"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Target_Spot"
+      hub_model_id: "pv_ts_v1"
+  
+  - name: "Tomato___Leaf_Mold"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Leaf_Mold"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Leaf_Mold"
+      hub_model_id: "pv_lm_v1"
+  
+  - name: "Tomato___Bacterial_spot"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Bacterial_spot"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Bacterial_spot"
+      hub_model_id: "pv_bs_v1"
+  
+  - name: "Tomato___Septoria_leaf_spot"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Septoria_leaf_spot"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Septoria_leaf_spot"
+      hub_model_id: "pv_sls_v1"
+  
+  - name: "Tomato___healthy"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___healthy"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___healthy"
+      hub_model_id: "pv_h_v1"
+  
+  - name: "Tomato___Tomato_Yellow_Leaf_Curl_Virus"
+    params_indv:
+      instance_data_dir: "/data/dataset/Split_PlantVillage/train/Tomato___Tomato_Yellow_Leaf_Curl_Virus"
+      validation_prompt: "a photo of sks leaf"
+      output_dir: "/data/march/dreambooth/Pv/Tomato___Tomato_Yellow_Leaf_Curl_Virus"
+      hub_model_id: "pv_tylcv_v1"

@@ -1466,7 +1466,10 @@ if __name__ == "__main__":
     
     for cls in config["classes"]:
         class_params = cls["params_indv"]
+        print(f"class = {cls}")
+        print(config)
         
         # Create new args dictionary
         new_args = argparse.Namespace(**common_params, **class_params)
+        print(new_args)
         main(args, newargs=new_args)

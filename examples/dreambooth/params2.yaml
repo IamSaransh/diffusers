@@ -19,6 +19,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Tomato_mosaic_virus"
       hub_model_id: "pv_tmv_v1"
+      num_count: 373
+      gen_count: 2000
   
   - name: "Tomato___Spider_mites_Two-spotted_spider_mite"
     params_indv:
@@ -26,6 +28,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Spider_mites_Two-spotted_spider_mite"
       hub_model_id: "pv_smtssm_v1"
+      num_count: 1676
+      gen_count: 2000
   
   - name: "Tomato___Late_blight"
     params_indv:
@@ -33,6 +37,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Late_blight"
       hub_model_id: "pv_lb_v1"
+      num_count: 1909
+      gen_count: 2000
   
   - name: "Tomato___Early_blight"
     params_indv:
@@ -40,6 +46,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Early_blight"
       hub_model_id: "pv_eb_v1"
+      num_count: 1000
+      gen_count: 2000
   
   - name: "Tomato___Target_Spot"
     params_indv:
@@ -47,6 +55,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Target_Spot"
       hub_model_id: "pv_ts_v1"
+      num_count: 1404
+      gen_count: 2000
   
   - name: "Tomato___Leaf_Mold"
     params_indv:
@@ -54,6 +64,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Leaf_Mold"
       hub_model_id: "pv_lm_v1"
+      num_count: 952
+      gen_count: 2000
   
   - name: "Tomato___Bacterial_spot"
     params_indv:
@@ -61,6 +73,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Bacterial_spot"
       hub_model_id: "pv_bs_v1"
+      num_count: 2127
+      gen_count: 2000
   
   - name: "Tomato___Septoria_leaf_spot"
     params_indv:
@@ -68,6 +82,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Septoria_leaf_spot"
       hub_model_id: "pv_sls_v1"
+      num_count: 1771
+      gen_count: 2000
   
   - name: "Tomato___healthy"
     params_indv:
@@ -75,6 +91,8 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___healthy"
       hub_model_id: "pv_h_v1"
+      num_count: 1591
+      gen_count: 2000
   
   - name: "Tomato___Tomato_Yellow_Leaf_Curl_Virus"
     params_indv:
@@ -82,3 +100,5 @@ classes:
       validation_prompt: "a photo of sks leaf"
       output_dir: "/data/march/dreambooth/Pv/Tomato___Tomato_Yellow_Leaf_Curl_Virus"
       hub_model_id: "pv_tylcv_v1"
+      num_count: 5357
+      gen_count: 5357

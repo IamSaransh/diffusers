@@ -818,26 +818,28 @@ def main():
     
     from torch.utils.data import DataLoader, WeightedRandomSampler
 
-    # Assuming you have a dataset with class labels for each sample (train_dataset)
-    labels = [sample['label'] for sample in train_dataset]  # Replace with the correct way to extract labels
+    # Step 1: Extract string labels from dataset
+    labels = [sample['label'] for sample in train_dataset]  # string labels like "Healthy", "Bacterial Pustule early", etc.
 
-    # Define the classes for which you want to oversample
-    oversample_classes = [0, 2]
+    # Step 2: Create label-to-index mapping
+    unique_labels = sorted(set(labels))  # will be 4 classes
+    label_to_index = {label: idx for idx, label in enumerate(unique_labels)}
+    indexed_labels = [label_to_index[label] for label in labels]
 
-    # Calculate class weights
-    class_counts = {i: labels.count(i) for i in set(labels)}  # Get counts for each class
-    total_samples = len(labels)
+    # Step 3: Count instances per class
+    class_counts = {idx: indexed_labels.count(idx) for idx in set(indexed_labels)}
 
-    # Assign a higher weight for the classes you want to oversample
-    weights = []
-    for label in labels:
-        if label in oversample_classes:
-            weights.append(1.0 / class_counts[label])  # Give higher weight to underrepresented classes
-        else:
-            weights.append(1.0 / class_counts[label])  # Default weight for other classes
+    # Step 4: Assign equal weight to each class
+    # Weight for sample = 1 / class_count, so that each class contributes equally
+    weights = [1.0 / class_counts[label_idx] for label_idx in indexed_labels]
 
-    # Create the WeightedRandomSampler
-    sampler = WeightedRandomSampler(weights, len(weights), replacement=True)
+    # Optional: Identify specific labels to mention as oversampled (useful for logging)
+    oversample_labels = ["Bacterial Pustule early", "Bacterial Pustule late"]
+    oversample_indices = [label_to_index[lbl] for lbl in oversample_labels]
+    print("Oversampling classes:", oversample_labels)
+
+    # Step 5: Create sampler for equal sampling
+    sampler = WeightedRandomSampler(weights, num_samples=len(labels), replacement=True)
 
     # DataLoaders creation:
     train_dataloader = torch.utils.data.DataLoader(

@@ -1,4 +1,4 @@
-Of course. Here is a rewritten README.md that reflects your work on generative augmentation for plant disease diagnosis, incorporating the architectural images and performance improvements.
+## This is fork of HF Diffusers changed to my current research work
 
 <p align="center">
 
@@ -107,3 +107,4 @@ Code snippet
   journal = {GitHub repository},
   howpublished = {\url{https://github.com/your-username/your-repo-name}}
 }
+
